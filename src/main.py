@@ -47,6 +47,7 @@ from telegram.ext import (
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.DEBUG
 )
+logging.getLogger('hpack').setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
 
 RECEIVE_NAME, RECEIVE_SUBSCRIPTION_PREFERENCE, DEFAULT_STATE, RECEIVE_PHOTO = range(4)
