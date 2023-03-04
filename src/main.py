@@ -161,7 +161,10 @@ def main() -> None:
 
     # Add conversation handler with the states CHOOSING, TYPING_CHOICE and TYPING_REPLY
     conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("start", start)],
+        entry_points=[
+            CommandHandler("start", start),
+            MessageHandler(filters.TEXT, start),
+        ],
         states={
             RECEIVE_NAME: [MessageHandler(filters.TEXT, receive_name)],
             RECEIVE_SUBSCRIPTION_PREFERENCE: [
