@@ -1,4 +1,13 @@
+from dataclasses import dataclass
+
 from mongo import BaseMongoRepository
+
+
+@dataclass
+class User:
+    id: int
+    name: str
+    subscribed_to_mapping_requests: bool
 
 
 class UserController(BaseMongoRepository):
@@ -8,8 +17,13 @@ class UserController(BaseMongoRepository):
     def __init__(self):
         super().__init__()
 
-    async def get_user(self, user_id: int) -> dict:
-        return await self._find_one({'_id': user_id})
+    async def get_user(self, user_id: int) -> User:
+        user_dict = await self._find_one({'_id': user_id})
+        return User(
+            id=user_dict['_id'],
+            name=user_dict['name'],
+            subscribed_to_mapping_requests=user_dict['subscribed_to_mapping_requests']
+        )
 
     async def update_name(self, user_id: int, name: str):
         await self._update_one({'_id': user_id}, {'$set': {'name': name}}, upsert=True)

@@ -128,19 +128,21 @@ async def receive_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     await update.message.reply_text(reply_text, reply_markup=default_markup)
 
-    chat_ids = await user_controller.get_users_subscribed_to_mapping_requests()
+    subscribers = await user_controller.get_users_subscribed_to_mapping_requests()
 
     markup = InlineKeyboardMarkup([
-        [InlineKeyboardButton(str(bhumi), callback_data=f"map_{object_id}_{bhumi}") for bhumi in range(0, 5)],
-        [InlineKeyboardButton(str(bhumi), callback_data=f"map_{object_id}_{bhumi}") for bhumi in range(5, 10)],
-        [InlineKeyboardButton(str(bhumi), callback_data=f"map_{object_id}_{bhumi}") for bhumi in range(10, 14)],
+        [InlineKeyboardButton(str(bhumi), callback_data=f"map_{object_id}_{bhumi}") for bhumi in ['N/A', '0', '1', '2', '3']],
+        [InlineKeyboardButton(str(bhumi), callback_data=f"map_{object_id}_{bhumi}") for bhumi in range(4, 9)],
+        [InlineKeyboardButton(str(bhumi), callback_data=f"map_{object_id}_{bhumi}") for bhumi in range(9, 14)],
 
     ])
 
-    for chat_id in chat_ids:
+    user = await user_controller.get_user(update.message.from_user.id)
+
+    for chat_id in subscribers:
         await context.bot.send_photo(chat_id=chat_id,
                                      photo=photo_id,
-                                     caption="Новое фото для маппинга! ",
+                                     caption="Новое фото для маппинга от {}!".format(user.name),
                                      reply_markup=markup)
 
     return DEFAULT_STATE
@@ -152,12 +154,12 @@ async def map_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     object_id = data[1]
     bhumi = data[2]
 
-    user = await user_controller.get_user(query.from_user.id)
+    mapper = await user_controller.get_user(query.from_user.id)
 
-    sender = await photo_controller.get_photo_sender(object_id)
+    owner = await photo_controller.get_photo_sender(object_id)
 
-    await context.bot.send_message(chat_id=sender,
-                                   text=f"{user['name']} отмапил тебя на {bhumi} буми! ")
+    await context.bot.send_message(chat_id=owner,
+                                   text=f"{mapper.name} отмапил тебя на {bhumi} буми! ")
 
     await query.answer()
     await query.edit_message_caption(caption=f"Ты намапил {bhumi} буми")
