@@ -101,7 +101,8 @@ async def receive_notification_preference(update: Update, context: ContextTypes.
     else:
         await user_controller.update_mapping_request_subscription(update.message.from_user.id, False)
 
-    reply_text = "Отлично, теперь ты можешь отправить свое фото или мапить чужие. "
+    reply_text = "Отлично, теперь ты можешь отправить свое фото или мапить чужие. " \
+                 "Для этого нажми на одну из кнопок ниже. "
 
     await update.message.reply_text(reply_text, reply_markup=default_markup)
 
@@ -109,7 +110,8 @@ async def receive_notification_preference(update: Update, context: ContextTypes.
 
 
 async def default_state(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    reply_text = "Теперь жди новых фото и мапь их или загрузи свое фото."
+    reply_text = "Ты можешь загрузить свое фото для маппинга или замапить чужие. " \
+                 "Для этого нажми на одну из кнопок ниже."
 
     await update.message.reply_text(reply_text, reply_markup=default_markup)
     return DEFAULT_STATE
@@ -119,6 +121,12 @@ async def ask_for_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     reply_text = "Отправь свое фото 🤌"
     await update.message.reply_text(reply_text)
     return RECEIVE_PHOTO
+
+
+async def map_new_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    reply_text = "Новых фото еще нет"
+    await update.message.reply_text(reply_text, reply_markup=default_markup)
+    return DEFAULT_STATE
 
 
 async def receive_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -202,6 +210,7 @@ def main() -> None:
             DEFAULT_STATE: [
                 CommandHandler("start", start),
                 MessageHandler(filters.Text(["Отправить свое фото"]), ask_for_photo),
+                MessageHandler(filters.Text(["Замапить чужое фото"]), map_new_photo),
                 MessageHandler(filters.TEXT, default_state)
             ],
             RECEIVE_PHOTO: [
