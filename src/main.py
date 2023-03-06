@@ -15,6 +15,7 @@ bot.
 """
 import asyncio
 import logging
+from typing import Optional
 
 from telegram import __version__ as TG_VER
 
@@ -53,7 +54,7 @@ logging.basicConfig(
 logging.getLogger('hpack').setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
 
-RECEIVE_NAME, RECEIVE_SUBSCRIPTION_PREFERENCE, DEFAULT_STATE, RECEIVE_PHOTO = range(4)
+AWAIT_NAME, AWAIT_SUBSCRIPTION_PREFERENCE, DEFAULT_STATE, AWAIT_PHOTO, AWAIT_MAPPING_COMMENT = range(5)
 
 default_reply_keyboard = [
     ["Отправить свое фото"],
@@ -72,7 +73,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     markup = ReplyKeyboardRemove()
     await update.message.reply_text(reply_text, reply_markup=markup)
 
-    return RECEIVE_NAME
+    return AWAIT_NAME
 
 
 async def receive_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -89,7 +90,7 @@ async def receive_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
     await update.message.reply_text(reply_text, reply_markup=markup)
 
-    return RECEIVE_SUBSCRIPTION_PREFERENCE
+    return AWAIT_SUBSCRIPTION_PREFERENCE
 
 
 async def receive_notification_preference(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -120,13 +121,23 @@ async def default_state(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 async def ask_for_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     reply_text = "Отправь свое фото 🤌"
     await update.message.reply_text(reply_text)
-    return RECEIVE_PHOTO
+    return AWAIT_PHOTO
 
 
 async def map_new_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     reply_text = "Новых фото еще нет"
     await update.message.reply_text(reply_text, reply_markup=default_markup)
     return DEFAULT_STATE
+
+
+# async def train(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+#     reply_text = "Режим обучения. Твоя оценка не будет сохранена, но ты увидишь чужие."
+#     markup = InlineKeyboardMarkup([
+#         [InlineKeyboardButton("показать фото", callback_data=f"trainmenu_next")],
+#         [InlineKeyboardButton("закончить обучение", callback_data=f"trainmenu_next")],
+#     ])
+#     await update.message.reply_text(reply_text, reply_markup=markup)
+#     return DEFAULT_STATE
 
 
 async def receive_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -142,7 +153,6 @@ async def receive_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         [InlineKeyboardButton(str(bhumi), callback_data=f"map_{object_id}_{bhumi}") for bhumi in ['N/A', '0', '1', '2', '3']],
         [InlineKeyboardButton(str(bhumi), callback_data=f"map_{object_id}_{bhumi}") for bhumi in range(4, 9)],
         [InlineKeyboardButton(str(bhumi), callback_data=f"map_{object_id}_{bhumi}") for bhumi in range(9, 14)],
-
     ])
 
     user = await user_controller.get_user(update.message.from_user.id)
@@ -156,34 +166,73 @@ async def receive_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     return DEFAULT_STATE
 
 
-async def map_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def receive_mapping_result(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     data = query.data.split('_')
-    object_id = data[1]
+    photo_id = data[1]
     bhumi = data[2]
 
-    mapper = await user_controller.get_user(query.from_user.id)
+    context.user_data["last_mapped_photo"] = photo_id
+    context.user_data["last_mapped_result"] = bhumi
 
-    owner = await photo_controller.get_photo_sender(object_id)
+    # await query.answer()
+    markup = InlineKeyboardMarkup([
+        [InlineKeyboardButton('добавить комментарий (рекомендуется)', callback_data=f"mapcomment_yes")],
+        [InlineKeyboardButton('пропустить комментарий', callback_data=f"mapcomment_no")],
+    ])
 
-    await context.bot.send_message(chat_id=owner,
-                                   text=f"{mapper.name} отмапил тебя на {bhumi} буми! ")
+    await query.edit_message_caption(
+        caption=f"Фото замаплено на {bhumi} буми. Что насчет комментария?",
+        reply_markup=markup,
+    )
+    return DEFAULT_STATE
 
-    await query.answer()
-    await query.edit_message_caption(caption=f"Ты намапил {bhumi} буми")
+
+async def handle_new_mapping(update: Update, context: ContextTypes.DEFAULT_TYPE, mapper_id: int,  photo_id: str, bhumi: str, comment: Optional[str]):
+    mapper = await user_controller.get_user(mapper_id)
+    owner = await photo_controller.get_photo_sender(photo_id)
+    await photo_controller.update_mapping_result(photo_id, mapper_id, bhumi, comment)
+
+    await context.bot.send_message(chat_id=mapper_id, text="Оценка сохранена, удачи!", reply_markup=default_markup)
+    text = f"{mapper.name} отмапил твое фото.\nБуми: {bhumi}."
+    if comment:
+        text += f"\nКомментарий: {comment}"
+    await context.bot.send_message(chat_id=owner, text=text)
+    return DEFAULT_STATE
 
 
-# async def done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-#     """Display the gathered info and end the conversation."""
-#     if "choice" in context.user_data:
-#         del context.user_data["choice"]
-#
-#     await update.message.reply_text(
-#         f"I learned these facts about you: {facts_to_str(context.user_data)}Until next time!",
-#         reply_markup=ReplyKeyboardRemove(),
-#     )
-#     return ConversationHandler.END
-#
+async def skip_mapping_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.callback_query.edit_message_reply_markup(None)
+    return await handle_new_mapping(
+        update,
+        context,
+        update.callback_query.from_user.id,
+        context.user_data["last_mapped_photo"],
+        context.user_data["last_mapped_result"],
+        None
+    )
+
+
+async def ask_mapping_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.callback_query.edit_message_reply_markup(None)
+    await context.bot.send_message(
+        chat_id=update.callback_query.from_user.id,
+        text="Напиши комментарий. Например, чувствую пустотность в матке.",
+        reply_markup=None
+    )
+    return AWAIT_MAPPING_COMMENT
+
+
+async def receive_mapping_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    return await handle_new_mapping(
+        update,
+        context,
+        update.message.from_user.id,
+        context.user_data["last_mapped_photo"],
+        context.user_data["last_mapped_result"],
+        update.message.text
+    )
+
 
 async def init():
     MongoConnection.initialize()
@@ -203,28 +252,36 @@ def main() -> None:
             MessageHandler(filters.TEXT, start),
         ],
         states={
-            RECEIVE_NAME: [MessageHandler(filters.TEXT, receive_name)],
-            RECEIVE_SUBSCRIPTION_PREFERENCE: [
+            AWAIT_NAME: [MessageHandler(filters.TEXT, receive_name)],
+            AWAIT_SUBSCRIPTION_PREFERENCE: [
                 MessageHandler(filters.Regex("^(Да|Нет)$"), receive_notification_preference)
             ],
             DEFAULT_STATE: [
                 CommandHandler("start", start),
                 MessageHandler(filters.Text(["Отправить свое фото"]), ask_for_photo),
                 MessageHandler(filters.Text(["Замапить чужое фото"]), map_new_photo),
-                MessageHandler(filters.TEXT, default_state)
+                MessageHandler(filters.TEXT, default_state),
             ],
-            RECEIVE_PHOTO: [
+            AWAIT_PHOTO: [
                 MessageHandler(filters.PHOTO, receive_photo),
                 MessageHandler(filters.TEXT, default_state),
             ],
+            AWAIT_MAPPING_COMMENT: [
+                MessageHandler(filters.TEXT, receive_mapping_comment),
+            ],
         },
-        fallbacks=[MessageHandler(filters.ALL, default_state)],
+        fallbacks=[
+            CallbackQueryHandler(receive_mapping_result, pattern=r"^map_.*$"),
+            CallbackQueryHandler(skip_mapping_comment, pattern=r"^mapcomment_no$"),
+            CallbackQueryHandler(ask_mapping_comment, pattern=r"^mapcomment_yes$"),
+            # application.add_handler(CommandHandler("train", train)),
+            MessageHandler(filters.ALL, default_state)
+        ],
         name="my_conversation",
         persistent=True,
     )
 
     application.add_handler(conv_handler)
-    application.add_handler(CallbackQueryHandler(map_photo, pattern=r"^map_.*$"))
 
     # show_data_handler = CommandHandler("show_data", show_data)
     # application.add_handler(show_data_handler)
