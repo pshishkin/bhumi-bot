@@ -15,7 +15,6 @@ bot.
 """
 import asyncio
 import logging
-from typing import Dict
 
 from telegram import __version__ as TG_VER
 
@@ -35,7 +34,7 @@ if __version_info__ < (20, 0, 0, "alpha", 1):
         f"{TG_VER} version of this example, "
         f"visit https://docs.python-telegram-bot.org/en/v{TG_VER}/examples.html"
     )
-from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
+from telegram import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemove, Update
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -44,6 +43,7 @@ from telegram.ext import (
     MessageHandler,
     PicklePersistence,
     filters,
+    CallbackQueryHandler,
 )
 
 # Enable logging
@@ -93,7 +93,6 @@ async def receive_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> in
 
 
 async def receive_notification_preference(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-
     context.user_data["notification_preference"] = update.message.text
 
     text = update.message.text.lower()
@@ -124,16 +123,45 @@ async def ask_for_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
 async def receive_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     photo_id = update.message.photo[-1].file_id
-    await photo_controller.add_photo(update.message.from_user.id, photo_id)
+    object_id = await photo_controller.add_photo(update.message.from_user.id, photo_id)
     reply_text = "Спасибо! Твое фото загружено, теперь жди результатов маппинга, я буду отправлять тебе каждый новый маппинг"
 
     await update.message.reply_text(reply_text, reply_markup=default_markup)
 
     chat_ids = await user_controller.get_users_subscribed_to_mapping_requests()
+
+    markup = InlineKeyboardMarkup([
+        [InlineKeyboardButton(str(bhumi), callback_data=f"map_{object_id}_{bhumi}") for bhumi in range(0, 5)],
+        [InlineKeyboardButton(str(bhumi), callback_data=f"map_{object_id}_{bhumi}") for bhumi in range(5, 10)],
+        [InlineKeyboardButton(str(bhumi), callback_data=f"map_{object_id}_{bhumi}") for bhumi in range(10, 14)],
+
+    ])
+
     for chat_id in chat_ids:
-        await context.bot.send_photo(chat_id=chat_id, photo=photo_id, caption="Новое фото для маппинга! ")
+        await context.bot.send_photo(chat_id=chat_id,
+                                     photo=photo_id,
+                                     caption="Новое фото для маппинга! ",
+                                     reply_markup=markup)
 
     return DEFAULT_STATE
+
+
+async def map_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    data = query.data.split('_')
+    object_id = data[1]
+    bhumi = data[2]
+
+    user = await user_controller.get_user(query.from_user.id)
+
+    sender = await photo_controller.get_photo_sender(object_id)
+
+    await context.bot.send_message(chat_id=sender,
+                                   text=f"{user['name']} отмапил тебя на {bhumi} буми! ")
+
+    await query.answer()
+    await query.edit_message_caption(caption=f"Ты намапил {bhumi} буми")
+
 
 # async def done(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 #     """Display the gathered info and end the conversation."""
@@ -159,7 +187,6 @@ def main() -> None:
     persistence = PicklePersistence(filepath="conversationbot")
     application = Application.builder().token(settings.TELEGRAM_TOKEN).persistence(persistence).build()
 
-    # Add conversation handler with the states CHOOSING, TYPING_CHOICE and TYPING_REPLY
     conv_handler = ConversationHandler(
         entry_points=[
             CommandHandler("start", start),
@@ -186,6 +213,7 @@ def main() -> None:
     )
 
     application.add_handler(conv_handler)
+    application.add_handler(CallbackQueryHandler(map_photo, pattern=r"^map_.*$"))
 
     # show_data_handler = CommandHandler("show_data", show_data)
     # application.add_handler(show_data_handler)
