@@ -54,7 +54,8 @@ logging.basicConfig(
 logging.getLogger('hpack').setLevel(logging.INFO)
 logger = logging.getLogger(__name__)
 
-AWAIT_NAME, AWAIT_SUBSCRIPTION_PREFERENCE, DEFAULT_STATE, AWAIT_PHOTO, AWAIT_MAPPING_COMMENT = range(5)
+AWAIT_NAME, AWAIT_SUBSCRIPTION_PREFERENCE, DEFAULT_STATE, AWAIT_PHOTO, AWAIT_MAPPING_COMMENT,\
+    AWAIT_PERSON_ON_PHOTO_1, AWAIT_PERSON_ON_PHOTO_2 = range(7)
 
 default_reply_keyboard = [
     ["Отправить свое фото"],
@@ -139,10 +140,35 @@ async def map_new_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 #     await update.message.reply_text(reply_text, reply_markup=markup)
 #     return DEFAULT_STATE
 
-
 async def receive_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    photo_id = update.message.photo[-1].file_id
-    object_id = await photo_controller.add_photo(update.message.from_user.id, photo_id)
+    context.user_data["last_photo_id"] = update.message.photo[-1].file_id
+    reply_text = "Это ты или другой человек?"
+    reply_keyboard = [
+        ["Я", "Другой"],
+    ]
+    markup = ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True)
+    await update.message.reply_text(reply_text, reply_markup=markup)
+    return AWAIT_PERSON_ON_PHOTO_1
+
+
+async def receive_photo_other(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    # markup = ReplyKeyboardMarkup([], one_time_keyboard=True)
+    reply_text = "Как зовут человека? Это имя будет видно рядом с фото и результатами маппинга."
+    await update.message.reply_text(reply_text)
+    return AWAIT_PERSON_ON_PHOTO_2
+
+
+async def receive_photo_other_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    name = update.message.text
+    return await handle_new_photo(update, context, context.user_data["last_photo_id"], name)
+
+
+async def receive_photo_me(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    return await handle_new_photo(update, context, context.user_data["last_photo_id"], "")
+
+
+async def handle_new_photo(update: Update, context: ContextTypes.DEFAULT_TYPE, photo_id: str, name: str) -> int:
+    object_id = await photo_controller.add_photo(update.message.from_user.id, photo_id, name)
     reply_text = "Спасибо! Твое фото загружено, теперь жди результатов маппинга, я буду отправлять тебе каждый новый маппинг"
 
     await update.message.reply_text(reply_text, reply_markup=default_markup)
@@ -157,10 +183,14 @@ async def receive_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 
     user = await user_controller.get_user(update.message.from_user.id)
 
+    person_on_photo_suffix = ""
+    if name:
+        person_on_photo_suffix = f" ({name})"
+    caption = "Новое фото для маппинга от {}{}!".format(user.name, person_on_photo_suffix)
     for chat_id in subscribers:
         await context.bot.send_photo(chat_id=chat_id,
                                      photo=photo_id,
-                                     caption="Новое фото для маппинга от {}!".format(user.name),
+                                     caption=caption,
                                      reply_markup=markup)
 
     return DEFAULT_STATE
@@ -265,6 +295,13 @@ def main() -> None:
             AWAIT_PHOTO: [
                 MessageHandler(filters.PHOTO, receive_photo),
                 MessageHandler(filters.TEXT, default_state),
+            ],
+            AWAIT_PERSON_ON_PHOTO_1: [
+                MessageHandler(filters.Text(["Я"]), receive_photo_me),
+                MessageHandler(filters.Text(["Другой"]), receive_photo_other),
+            ],
+            AWAIT_PERSON_ON_PHOTO_2: [
+                MessageHandler(filters.TEXT, receive_photo_other_name),
             ],
             AWAIT_MAPPING_COMMENT: [
                 MessageHandler(filters.TEXT, receive_mapping_comment),

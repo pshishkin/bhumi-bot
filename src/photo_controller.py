@@ -12,13 +12,14 @@ class PhotoController(BaseMongoRepository):
     def __init__(self):
         super().__init__()
 
-    async def add_photo(self, user_id: int, photo_id: str) -> ObjectId:
+    async def add_photo(self, user_id: int, photo_id: str, person_name: str) -> ObjectId:
         obj_id = ObjectId()
         await self._insert_one({
             '_id': obj_id,
             'photo_id': photo_id,
             'user_id': user_id,
-            'timestamp': datetime.now(tz=timezone.utc)
+            'timestamp': datetime.now(tz=timezone.utc),
+            'name': person_name,
         })
         return obj_id
 
