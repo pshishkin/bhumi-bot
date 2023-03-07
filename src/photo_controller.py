@@ -1,8 +1,27 @@
+from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import List, Dict
 
 from bson import ObjectId
 
+import settings
 from mongo import BaseMongoRepository
+
+
+@dataclass
+class MappingResult:
+    mapper_id: int
+    result: str
+    comment: str
+
+
+@dataclass
+class Photo:
+    id: ObjectId
+    photo_id: str
+    user_id: int
+    name: str
+    mappings: List[MappingResult]
 
 
 class PhotoController(BaseMongoRepository):
@@ -37,3 +56,27 @@ class PhotoController(BaseMongoRepository):
         await self._update_one({'_id': ObjectId(obj_id)}, {
             '$set': {'mappings': {str(mapper_id): payload}}
         })
+
+    async def get_photo_by_id(self, obj_id: str) -> Photo:
+        photo_dict = await self._find_one({'_id': ObjectId(obj_id)})
+        return _get_photo_from_dict(photo_dict)
+
+    async def get_photos_for_train(self) -> List[Photo]:
+        ans = []
+        async for photo_dict in self._find({'mappings.{}'.format(settings.TRAIN_USER_ID): {'$exists': True}}):
+            ans.append(_get_photo_from_dict(photo_dict))
+        return ans
+
+
+def _get_photo_from_dict(d: Dict) -> Photo:
+    return Photo(
+        id=d['_id'],
+        user_id=d['user_id'],
+        photo_id=d['photo_id'],
+        name=d['name'],
+        mappings=[MappingResult(
+            mapper_id=int(mapper_id),
+            result=mapping['result'],
+            comment=mapping.get('comment', None),
+        ) for mapper_id, mapping in d['mappings'].items()]
+    )

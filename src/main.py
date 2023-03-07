@@ -14,14 +14,16 @@ Press Ctrl-C on the command line or send a signal to the process to stop the
 bot.
 """
 import asyncio
+import itertools
 import logging
+import random
 from typing import Optional
 
 from telegram import __version__ as TG_VER
 
 import settings
 from mongo import MongoConnection
-from photo_controller import PhotoController
+from photo_controller import PhotoController, Photo
 from user_controller import UserController
 
 try:
@@ -131,14 +133,56 @@ async def map_new_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     return DEFAULT_STATE
 
 
-# async def train(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-#     reply_text = "Режим обучения. Твоя оценка не будет сохранена, но ты увидишь чужие."
-#     markup = InlineKeyboardMarkup([
-#         [InlineKeyboardButton("показать фото", callback_data=f"trainmenu_next")],
-#         [InlineKeyboardButton("закончить обучение", callback_data=f"trainmenu_next")],
-#     ])
-#     await update.message.reply_text(reply_text, reply_markup=markup)
-#     return DEFAULT_STATE
+async def send_train_photo(update: Update, context: ContextTypes.DEFAULT_TYPE, photo: Photo) -> None:
+    markup = InlineKeyboardMarkup([
+        [InlineKeyboardButton(str(bhumi), callback_data=f"trainmap_{photo.id}_{bhumi}") for bhumi in ['N/A', '0', '1', '2', '3']],
+        [InlineKeyboardButton(str(bhumi), callback_data=f"trainmap_{photo.id}_{bhumi}") for bhumi in range(4, 9)],
+        [InlineKeyboardButton(str(bhumi), callback_data=f"trainmap_{photo.id}_{bhumi}") for bhumi in range(9, 14)],
+    ])
+    await update.message.reply_photo(photo=photo.photo_id, caption='Как оценишь?', reply_markup=markup)
+
+
+async def receive_train_photo_mapping(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    data = query.data.split('_')
+    photo_id = data[1]
+    bhumi = data[2]
+
+    photo = await photo_controller.get_photo_by_id(photo_id)
+    answers = ""
+    for mapping in photo.mappings:
+        user_name = (await user_controller.get_user(mapping.mapper_id)).name
+        mapping_comment = ""
+        if mapping.comment:
+            mapping_comment = f" ({mapping.comment})"
+        answers += f"{user_name}: {mapping.result}{mapping_comment}\n"
+
+    # await query.answer()
+    markup = InlineKeyboardMarkup([])
+
+    await query.edit_message_caption(
+        caption=f"Ты поставил {bhumi} буми. А вот ответы других:\n{answers}",
+        reply_markup=markup,
+    )
+    return DEFAULT_STATE
+
+
+async def train01(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    reply_text = "Режим обучения. Твоя оценка не будет сохранена, но ты увидишь чужие. Вот два фото одного человека."
+    await update.message.reply_text(reply_text)
+    photos = await photo_controller.get_photos_for_train()
+    for key, group in itertools.groupby(photos, lambda x: "{}-{}".format(x.user_id, x.name)):
+        group = list(group)
+        if len(group) < 2:
+            continue
+        photos = random.choices(group, k=2)
+        await send_train_photo(update, context, photos[0])
+        await send_train_photo(update, context, photos[1])
+        return DEFAULT_STATE
+    reply_text = "Не получается найти достаточно фото."
+    await update.message.reply_text(reply_text)
+    return DEFAULT_STATE
+
 
 async def receive_photo(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data["last_photo_id"] = update.message.photo[-1].file_id
@@ -169,7 +213,8 @@ async def receive_photo_me(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
 async def handle_new_photo(update: Update, context: ContextTypes.DEFAULT_TYPE, photo_id: str, name: str) -> int:
     object_id = await photo_controller.add_photo(update.message.from_user.id, photo_id, name)
-    reply_text = "Спасибо! Твое фото загружено, теперь жди результатов маппинга, я буду отправлять тебе каждый новый маппинг"
+    reply_text = "Спасибо! Твое фото загружено, теперь жди результатов маппинга," \
+                 " я буду отправлять тебе каждый новый маппинг."
 
     await update.message.reply_text(reply_text, reply_markup=default_markup)
 
@@ -309,9 +354,10 @@ def main() -> None:
         },
         fallbacks=[
             CallbackQueryHandler(receive_mapping_result, pattern=r"^map_.*$"),
+            CallbackQueryHandler(receive_train_photo_mapping, pattern=r"^trainmap_.*$"),
             CallbackQueryHandler(skip_mapping_comment, pattern=r"^mapcomment_no$"),
             CallbackQueryHandler(ask_mapping_comment, pattern=r"^mapcomment_yes$"),
-            # application.add_handler(CommandHandler("train", train)),
+            application.add_handler(CommandHandler("train01", train01)),
             MessageHandler(filters.ALL, default_state)
         ],
         name="my_conversation",
