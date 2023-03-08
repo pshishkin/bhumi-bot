@@ -175,8 +175,7 @@ def get_photo_collective_mapping(photo: Photo) -> Optional[str]:
 
 
 async def train01(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    reply_text = "Режим обучения. Твоя оценка не будет сохранена, но ты увидишь чужие. Вот два фото одного человека." \
-                 "Одно фото 0 буми, другое сколько-то."
+    reply_text = "Режим обучения. Твоя оценка не будет сохранена, но ты увидишь чужие. Вот два фото одного человека."
     await update.message.reply_text(reply_text)
     photos = await photo_controller.get_photos_for_train()
     groups = []
@@ -206,8 +205,7 @@ async def train01(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 
 async def train12(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    reply_text = "Режим обучения. Твоя оценка не будет сохранена, но ты увидишь чужие. Вот два фото одного человека." \
-                 "Одно фото 0 буми, другое сколько-то."
+    reply_text = "Режим обучения. Твоя оценка не будет сохранена, но ты увидишь чужие. Вот два фото одного человека."
     await update.message.reply_text(reply_text)
     photos = await photo_controller.get_photos_for_train()
     groups = []
@@ -237,8 +235,7 @@ async def train12(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 
 async def train23(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    reply_text = "Режим обучения. Твоя оценка не будет сохранена, но ты увидишь чужие. Вот два фото одного человека." \
-                 "Одно фото 0 буми, другое сколько-то."
+    reply_text = "Режим обучения. Твоя оценка не будет сохранена, но ты увидишь чужие. Вот два фото одного человека."
     await update.message.reply_text(reply_text)
     photos = await photo_controller.get_photos_for_train()
     groups = []
@@ -271,13 +268,26 @@ async def train0a(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     reply_text = "Режим обучения. Твоя оценка не будет сохранена, но ты увидишь чужие. Вот два фото одного человека."
     await update.message.reply_text(reply_text)
     photos = await photo_controller.get_photos_for_train()
+    groups = []
     for key, group in itertools.groupby(photos, lambda x: "{}-{}".format(x.user_id, x.name)):
+        groups.append(list(group))
+
+    random.shuffle(groups)
+    for group in groups:
         group = list(group)
-        if len(group) < 2:
+        photos0 = [photo for photo in group if get_photo_collective_mapping(photo) == '0']
+        photosA = [photo for photo in group if get_photo_collective_mapping(photo) != '0' and get_photo_collective_mapping(photo) != 'N/A']
+        if not photos0 or not photosA:
             continue
-        photos = random.choices(group, k=2)
-        await send_train_photo(update, context, photos[0])
-        await send_train_photo(update, context, photos[1])
+        photo0 = random.choice(photos0)
+        photoA = random.choice(photosA)
+        if random.random() > 0.5:
+            await send_train_photo(update, context, photo0)
+            await send_train_photo(update, context, photoA)
+        else:
+            await send_train_photo(update, context, photoA)
+            await send_train_photo(update, context, photo0)
+
         return DEFAULT_STATE
     reply_text = "Не получается найти достаточно фото."
     await update.message.reply_text(reply_text)
