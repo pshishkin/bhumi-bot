@@ -167,7 +167,107 @@ async def receive_train_photo_mapping(update: Update, context: ContextTypes.DEFA
     return DEFAULT_STATE
 
 
+def get_photo_collective_mapping(photo: Photo) -> Optional[str]:
+    for mapping in photo.mappings:
+        if mapping.mapper_id == settings.TRAIN_USER_ID:
+            return mapping.result
+    return None
+
+
 async def train01(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    reply_text = "Режим обучения. Твоя оценка не будет сохранена, но ты увидишь чужие. Вот два фото одного человека." \
+                 "Одно фото 0 буми, другое сколько-то."
+    await update.message.reply_text(reply_text)
+    photos = await photo_controller.get_photos_for_train()
+    groups = []
+    for key, group in itertools.groupby(photos, lambda x: "{}-{}".format(x.user_id, x.name)):
+        groups.append(list(group))
+
+    random.shuffle(groups)
+    for group in groups:
+        group = list(group)
+        photos0 = [photo for photo in group if get_photo_collective_mapping(photo) == '0']
+        photosA = [photo for photo in group if get_photo_collective_mapping(photo) == '1']
+        if not photos0 or not photosA:
+            continue
+        photo0 = random.choice(photos0)
+        photoA = random.choice(photosA)
+        if random.random() > 0.5:
+            await send_train_photo(update, context, photo0)
+            await send_train_photo(update, context, photoA)
+        else:
+            await send_train_photo(update, context, photoA)
+            await send_train_photo(update, context, photo0)
+
+        return DEFAULT_STATE
+    reply_text = "Не получается найти достаточно фото."
+    await update.message.reply_text(reply_text)
+    return DEFAULT_STATE
+
+
+async def train12(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    reply_text = "Режим обучения. Твоя оценка не будет сохранена, но ты увидишь чужие. Вот два фото одного человека." \
+                 "Одно фото 0 буми, другое сколько-то."
+    await update.message.reply_text(reply_text)
+    photos = await photo_controller.get_photos_for_train()
+    groups = []
+    for key, group in itertools.groupby(photos, lambda x: "{}-{}".format(x.user_id, x.name)):
+        groups.append(list(group))
+
+    random.shuffle(groups)
+    for group in groups:
+        group = list(group)
+        photos0 = [photo for photo in group if get_photo_collective_mapping(photo) == '1']
+        photosA = [photo for photo in group if get_photo_collective_mapping(photo) == '2']
+        if not photos0 or not photosA:
+            continue
+        photo0 = random.choice(photos0)
+        photoA = random.choice(photosA)
+        if random.random() > 0.5:
+            await send_train_photo(update, context, photo0)
+            await send_train_photo(update, context, photoA)
+        else:
+            await send_train_photo(update, context, photoA)
+            await send_train_photo(update, context, photo0)
+
+        return DEFAULT_STATE
+    reply_text = "Не получается найти достаточно фото."
+    await update.message.reply_text(reply_text)
+    return DEFAULT_STATE
+
+
+async def train23(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    reply_text = "Режим обучения. Твоя оценка не будет сохранена, но ты увидишь чужие. Вот два фото одного человека." \
+                 "Одно фото 0 буми, другое сколько-то."
+    await update.message.reply_text(reply_text)
+    photos = await photo_controller.get_photos_for_train()
+    groups = []
+    for key, group in itertools.groupby(photos, lambda x: "{}-{}".format(x.user_id, x.name)):
+        groups.append(list(group))
+
+    random.shuffle(groups)
+    for group in groups:
+        group = list(group)
+        photos0 = [photo for photo in group if get_photo_collective_mapping(photo) == '2']
+        photosA = [photo for photo in group if get_photo_collective_mapping(photo) == '3']
+        if not photos0 or not photosA:
+            continue
+        photo0 = random.choice(photos0)
+        photoA = random.choice(photosA)
+        if random.random() > 0.5:
+            await send_train_photo(update, context, photo0)
+            await send_train_photo(update, context, photoA)
+        else:
+            await send_train_photo(update, context, photoA)
+            await send_train_photo(update, context, photo0)
+
+        return DEFAULT_STATE
+    reply_text = "Не получается найти достаточно фото."
+    await update.message.reply_text(reply_text)
+    return DEFAULT_STATE
+
+
+async def train0a(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     reply_text = "Режим обучения. Твоя оценка не будет сохранена, но ты увидишь чужие. Вот два фото одного человека."
     await update.message.reply_text(reply_text)
     photos = await photo_controller.get_photos_for_train()
@@ -358,6 +458,9 @@ def main() -> None:
             CallbackQueryHandler(skip_mapping_comment, pattern=r"^mapcomment_no$"),
             CallbackQueryHandler(ask_mapping_comment, pattern=r"^mapcomment_yes$"),
             application.add_handler(CommandHandler("train01", train01)),
+            application.add_handler(CommandHandler("train12", train12)),
+            application.add_handler(CommandHandler("train23", train23)),
+            application.add_handler(CommandHandler("train0a", train0a)),
             MessageHandler(filters.ALL, default_state)
         ],
         name="my_conversation",
