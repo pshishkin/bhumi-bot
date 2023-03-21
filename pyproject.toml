@@ -8,9 +8,11 @@ authors = ["pavel <pshishkin@gmail.com>"]
 python = "^3.9"
 python-telegram-bot = "^20.1"
 motor = "^3.1.1"
+tornado = "^6.2"
+tornado-http-auth = "^1.1.1"
 
 [tool.poetry.dev-dependencies]
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+requires = ["poetry-core>=1.4.0"]
 build-backend = "poetry.core.masonry.api"

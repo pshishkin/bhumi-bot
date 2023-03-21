@@ -1,0 +1,93 @@
+
+<html>
+    <head>
+        <title>File Upload</title>
+        <script>
+            var config = {'videos': [{"file_id":"acega0.pdf","file_name":"port"}]}
+            function uploadFile(){
+                var fileInput = document.getElementById('fileInput');
+                var fileName = document.getElementById('fileName').value;
+
+                let formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', '/upload', true);
+                xhr.onload = function(){
+                    if(xhr.status == 200){
+                        var uploadData = JSON.parse(xhr.response);
+                        var fileID = uploadData['file_id'];
+                        config['videos'].push({'file_id': fileID, 'file_name': fileName});
+                        document.getElementById('response').innerHTML = 'File ' + fileName + ' uploaded successfully with id ' + fileID + '!';
+                    } else {
+                        document.getElementById('response').innerHTML = 'An error occurred!';
+                    }
+                }
+                xhr.send(formData);
+            }
+
+            import React from 'react';
+
+            class VideoList extends React.Component {
+                constructor(props) {
+                    super(props);
+                    this.state = {
+                        videos: config['videos'].videos
+                    };
+                    this.onDragStart = this.onDragStart.bind(this);
+                    this.onDragOver = this.onDragOver.bind(this);
+                    this.onDrop = this.onDrop.bind(this);
+                }
+
+                onDragStart(e, index) {
+                    e.dataTransfer.setData('video_index', index);
+                }
+
+                onDragOver(e) {
+                    e.preventDefault();
+                }
+
+                onDrop(e, index) {
+                    const video_index = e.dataTransfer.getData('video_index');
+                    const videos = this.state.videos.slice();
+                    const video = videos[video_index];
+                    videos.splice(video_index, 1);
+                    videos.splice(index, 0, video);
+                    this.setState({videos: videos});
+                }
+
+                render() {
+                    return (
+                        <ul>
+                            {this.state.videos.map((video, index) => {
+                                return (
+                                    <li
+                                        key={video.file_id}
+                                        draggable="true"
+                                        onDragStart={(e) => this.onDragStart(e, index)}
+                                        onDragOver={this.onDragOver}
+                                        onDrop={(e) => this.onDrop(e, index)}
+                                    >
+                                        <span>{video.file_name}</span>
+                                    </li>
+                                )
+                            })}
+                        </ul>
+                    )
+                }
+            };
+
+            ReactDOM.render(<VideoList />, document.getElementById('videos_render'));
+
+        </script>
+    </head>
+    <body>
+        <form method="POST" action="/upload" enctype="multipart/form-data">
+            <input type="file" name="fileInput" id="fileInput" />
+            <input type="text" name="fileName" id="fileName" placeholder="Enter filename" />
+            <button type="button" onclick="uploadFile()">Upload</button>
+        </form>
+        <div id="response"></div>
+        <div id="videos_render"></div>
+    </body>
+</html>

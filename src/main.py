@@ -18,13 +18,14 @@ import itertools
 import logging
 import random
 from typing import Optional
-
+from web import main_web
 from telegram import __version__ as TG_VER
-
 import settings
 from mongo import MongoConnection
 from photo_controller import PhotoController, Photo
 from user_controller import UserController
+import argparse
+
 
 try:
     from telegram import __version_info__
@@ -487,6 +488,12 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(init())
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("mode", help="what's going to be launched", choices=['bot', 'web'])
+    args = parser.parse_args()
+    if args.mode == 'bot':
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(init())
+        main()
+    if args.mode == 'web':
+        main_web()
