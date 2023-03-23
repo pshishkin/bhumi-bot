@@ -10,5 +10,6 @@ TRAIN_USER_ID = int(os.getenv('TRAIN_USER_ID', '11'))
 
 # web settings
 VIDEO_ROOT = os.getenv('VIDEO_ROOT', './videos')
-WEB_PASS = os.getenv('VIDEO_ROOT', 'pass')
+WEB_USERNAME = os.getenv('WEB_USERNAME', 'a')
+WEB_PASS = os.getenv('VIDEO_ROOT', 'a')
 

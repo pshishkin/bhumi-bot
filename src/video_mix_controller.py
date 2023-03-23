@@ -1,27 +1,27 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import List, Dict
-
+from typing import List, Dict, Optional
 from bson import ObjectId
-
 import settings
 from mongo import BaseMongoRepository
+from enum import Enum
+
+
+class Status(Enum):
+    PROCESSING = "processing"
+    SUCCEED = "succeed"
+    FAILED = "failed"
 
 
 @dataclass
-class MappingResult:
-    mapper_id: int
-    result: str
-    comment: str
-
-
-@dataclass
-class Photo:
+class VideoMix:
     id: ObjectId
-    photo_id: str
-    user_id: int
-    name: str
-    mappings: List[MappingResult]
+    task_string: str
+    status: Status
+    status_details: Optional[str]
+    output_file: Optional[str]
+    timestamp_started: datetime
+    timestamp_finished: Optional[datetime]
 
 
 class VideoMixController(BaseMongoRepository):
@@ -31,52 +31,46 @@ class VideoMixController(BaseMongoRepository):
     def __init__(self):
         super().__init__()
 
-    async def add_photo(self, user_id: int, photo_id: str, person_name: str) -> ObjectId:
+    async def add_mix(self, task_string: str) -> ObjectId:
         obj_id = ObjectId()
         await self._insert_one({
             '_id': obj_id,
-            'photo_id': photo_id,
-            'user_id': user_id,
-            'timestamp': datetime.now(tz=timezone.utc),
-            'name': person_name,
+            'task_string': task_string,
+            'status': Status.PROCESSING.value,
+            'timestamp_started': datetime.now(tz=timezone.utc),
         })
         return obj_id
 
-    async def get_photo_sender(self, obj_id: str) -> int:
-        photo = await self._find_one({'_id': ObjectId(obj_id)})
-        return photo['user_id']
+    async def get_mix(self, obj_id: str) -> VideoMix:
+        mix = await self._find_one({'_id': ObjectId(obj_id)})
+        return _get_video_mix_from_dict(mix)
 
-    async def update_mapping_result(self, obj_id: str, mapper_id: int, result: str, comment: str = None):
-        payload = {
-            'timestamp': datetime.now(tz=timezone.utc),
-            'result': result,
-        }
-        if comment:
-            payload['comment'] = comment
+    async def mark_mix_as_succeed(self, obj_id: str, output_file: str):
         await self._update_one({'_id': ObjectId(obj_id)}, {
-            '$set': {'mappings': {str(mapper_id): payload}}
+            '$set': {
+                'status': Status.SUCCEED.value,
+                'output_file': output_file,
+                'timestamp_finished': datetime.now(tz=timezone.utc),
+            }
         })
 
-    async def get_photo_by_id(self, obj_id: str) -> Photo:
-        photo_dict = await self._find_one({'_id': ObjectId(obj_id)})
-        return _get_photo_from_dict(photo_dict)
+    async def mark_mix_as_failed(self, obj_id: str, status_details: str):
+        await self._update_one({'_id': ObjectId(obj_id)}, {
+            '$set': {
+                'status': Status.FAILED.value,
+                'status_details': status_details,
+                'timestamp_finished': datetime.now(tz=timezone.utc),
+            }
+        })
 
-    async def get_photos_for_train(self) -> List[Photo]:
-        ans = []
-        async for photo_dict in self._find({'mappings.{}'.format(settings.TRAIN_USER_ID): {'$exists': True}}):
-            ans.append(_get_photo_from_dict(photo_dict))
-        return ans
 
-
-def _get_photo_from_dict(d: Dict) -> Photo:
-    return Photo(
+def _get_video_mix_from_dict(d: Dict) -> VideoMix:
+    return VideoMix(
         id=d['_id'],
-        user_id=d['user_id'],
-        photo_id=d['photo_id'],
-        name=d['name'],
-        mappings=[MappingResult(
-            mapper_id=int(mapper_id),
-            result=mapping['result'],
-            comment=mapping.get('comment', None),
-        ) for mapper_id, mapping in d['mappings'].items()]
+        task_string=d['task_string'],
+        status=Status(d['status']),
+        status_details=d.get('status_details'),
+        output_file=d.get('output_file'),
+        timestamp_started=d['timestamp_started'],
+        timestamp_finished=d.get('timestamp_finished'),
     )
