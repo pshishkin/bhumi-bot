@@ -230,7 +230,7 @@ async def async_init():
 
 
 def main_web():
-    print('web')
+    print(f'web {credentials}')
     init_web()
     loop = asyncio.get_event_loop()
     loop.run_until_complete(async_init())
