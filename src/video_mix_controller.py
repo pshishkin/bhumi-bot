@@ -45,8 +45,12 @@ class VideoMixController(BaseMongoRepository):
         mix = await self._find_one({'_id': ObjectId(obj_id)})
         return _get_video_mix_from_dict(mix)
 
-    async def mark_mix_as_succeed(self, obj_id: str, output_file: str):
-        await self._update_one({'_id': ObjectId(obj_id)}, {
+    async def get_all_mixes(self) -> List[VideoMix]:
+        mixes = await self._find({}).sort('timestamp_started', -1).to_list(length=1000)
+        return [_get_video_mix_from_dict(mix) for mix in mixes]
+
+    async def mark_mix_as_succeed(self, obj_id: ObjectId, output_file: str):
+        await self._update_one({'_id': obj_id}, {
             '$set': {
                 'status': Status.SUCCEED.value,
                 'output_file': output_file,
@@ -54,8 +58,8 @@ class VideoMixController(BaseMongoRepository):
             }
         })
 
-    async def mark_mix_as_failed(self, obj_id: str, status_details: str):
-        await self._update_one({'_id': ObjectId(obj_id)}, {
+    async def mark_mix_as_failed(self, obj_id: ObjectId, status_details: str):
+        await self._update_one({'_id': obj_id}, {
             '$set': {
                 'status': Status.FAILED.value,
                 'status_details': status_details,

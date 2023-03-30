@@ -50,23 +50,32 @@
             }
         </script>
 
+        <style>
+            .error {
+                color: red;
+            }
+        </style>
 
     </head>
     <body>
         <h1>Upload File</h1>
         <form method="POST" action="/upload" enctype="multipart/form-data">
             <input type="file" name="fileInput" id="fileInput" />
-            <input type="text" name="fileName" id="fileName" placeholder="Enter filename" />
+            <input type="text" name="fileName" id="fileName" placeholder="New filename (optional)" />
             <button type="button" onclick="uploadFile()">Upload</button>
         </form>
         <div id="response"></div>
         <h1>Generate Video</h1>
         <form method="POST" action="/generate" enctype="multipart/form-data">
             <textarea id="generateTask" rows="10" cols="50">
-
+                {{ task_string }}
             </textarea>
             <button type="button" onclick="generateFile()">Generate</button>
         </form>
-        <div id="response2"></div>
+        <div id="response2">
+        {% if status_details %}
+            <div class="error">{{ status_details }}</div>
+        {% end %}
+        </div>
     </body>
 </html>

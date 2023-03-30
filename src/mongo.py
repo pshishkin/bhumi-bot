@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -26,6 +27,7 @@ class MongoConnection:
                 settings.MONGO_CONN_STR,
                 **kwargs
             )
+            cls.client.get_io_loop = asyncio.get_running_loop
             cls.logger.info('Created Mongo Client')
         else:
             cls.logger.info('Skipping more than once mongo client initialization')

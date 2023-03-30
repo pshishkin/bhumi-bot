@@ -11,6 +11,7 @@ motor = "^3.1.1"
 tornado = "^6.2"
 tornado-http-auth = "^1.1.1"
 ffmpeg-python = "^0.2.0"
+moviepy = "^1.0.3"
 
 [tool.poetry.dev-dependencies]
 
