@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import json
 import os
 import random
@@ -7,9 +8,6 @@ import string
 
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorClient
-from moviepy.editor import (
-    concatenate_videoclips, VideoFileClip, AudioFileClip, concatenate_audioclips
-)
 from concurrent.futures import ThreadPoolExecutor
 from tornado.ioloop import IOLoop
 
@@ -21,19 +19,50 @@ import tornado_http_auth
 import settings
 from mongo import MongoConnection
 from video_mix_controller import VideoMixController
+import functools
 
 credentials = {settings.WEB_USERNAME: settings.WEB_PASS}
 
 
+class AuthHandler(tornado.web.RequestHandler):
+    def get(self, show_error=False):
+        self.render("templates/auth_template.html", show_error=show_error)
+
+    def post(self):
+        username = self.get_argument("username")
+        password = self.get_argument("password")
+
+        if username in credentials and credentials[username] == password:
+            self.set_secure_cookie("auth", tornado.escape.json_encode({"username": username}))
+            self.redirect("/video_mixes/")
+        else:
+            self.get(show_error=True)
+
+
+def auth_required(method):
+    @functools.wraps(method)
+    def wrapper(handler, *args, **kwargs):
+        auth_data = tornado.escape.json_decode(handler.get_secure_cookie("auth")) if handler.get_secure_cookie(
+            "auth") else None
+
+        if auth_data and auth_data["username"] in credentials:
+            return method(handler, *args, **kwargs)
+        else:
+            handler.redirect("/auth/")
+            return None
+
+    return wrapper
+
+
 class TestHandler(tornado.web.RequestHandler, tornado_http_auth.DigestAuthMixin):
-    @tornado_http_auth.auth_required(realm='Protected', auth_func=credentials.get)
+    @auth_required
     def get(self):
         items = ["Item 1", "Item 2", "Item 3"]
         self.render("templates/template.html", title="My title", items=items)
 
 
 class VideoMixHandler(tornado.web.RequestHandler, tornado_http_auth.DigestAuthMixin):
-    @tornado_http_auth.auth_required(realm='Protected', auth_func=credentials.get)
+    @auth_required
     async def get(self, video_mix_id=None):
         if video_mix_id:
             video_mix_id = video_mix_id.rstrip('/')
@@ -49,7 +78,7 @@ class VideoMixHandler(tornado.web.RequestHandler, tornado_http_auth.DigestAuthMi
 
 
 class UploadHandler(tornado.web.RequestHandler, tornado_http_auth.DigestAuthMixin):
-    @tornado_http_auth.auth_required(realm='Protected', auth_func=credentials.get)
+    @auth_required
     def post(self):
         try:
             file = self.request.files['file'][0]
@@ -78,7 +107,7 @@ class UploadHandler(tornado.web.RequestHandler, tornado_http_auth.DigestAuthMixi
 class GenerateHandler(tornado.web.RequestHandler, tornado_http_auth.DigestAuthMixin):
     executor = ThreadPoolExecutor(max_workers=4)
 
-    @tornado_http_auth.auth_required(realm='Protected', auth_func=credentials.get)
+    @auth_required
     async def post(self):
         try:
             mix_request = self.get_argument('generateTask')
@@ -106,7 +135,7 @@ class NoVideoException(Exception):
 
 
 class VideoMixListHandler(tornado.web.RequestHandler, tornado_http_auth.DigestAuthMixin):
-    @tornado_http_auth.auth_required(realm='Protected', auth_func=credentials.get)
+    @auth_required
     async def get(self):
         video_mixes = await video_mix_controller.get_all_mixes()
         print(video_mixes[0])
@@ -139,6 +168,10 @@ def wrap_generate_video_mix(video_files, output_file):
     else:
         print('ok fine')
 
+
+from moviepy.editor import (
+    concatenate_videoclips, VideoFileClip, AudioFileClip, concatenate_audioclips
+)
 
 def generate_video_mix(video_files, output_file):
     video_clips = []
@@ -191,6 +224,7 @@ def make_app():
 
     return tornado.web.Application([
         (r"/test/", TestHandler),
+        (r"/auth/", AuthHandler),
         (r"/video_mix/([a-zA-Z0-9]*/?)", VideoMixHandler),
         (r"/video_mix_download/(.*)", DownloadHandler, {"path": DOWNLOAD}),
         (r"/video_mixes/", VideoMixListHandler),
@@ -202,7 +236,7 @@ def make_app():
 async def main_tornado():
     app = make_app()
     app.listen(8432)
-    # IOLoop.current().start()
+    app.settings["cookie_secret"] = hashlib.sha256(settings.COOKIE_SECRET.encode()).hexdigest()
     await asyncio.Event().wait()
 
 
@@ -230,7 +264,6 @@ async def async_init():
 
 
 def main_web():
-    print(f'web {credentials}')
     init_web()
     loop = asyncio.get_event_loop()
     loop.run_until_complete(async_init())

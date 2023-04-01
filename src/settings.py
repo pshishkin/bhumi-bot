@@ -12,4 +12,6 @@ TRAIN_USER_ID = int(os.getenv('TRAIN_USER_ID', '11'))
 VIDEO_ROOT = os.getenv('VIDEO_ROOT', './videos')
 WEB_USERNAME = os.getenv('WEB_USERNAME', 'a')
 WEB_PASS = os.getenv('WEB_PASS', 'aa')
+COOKIE_SECRET = "your_cookie_secret"
+
 

@@ -2,6 +2,11 @@
 <html>
 <head>
     <title>{{ title }}</title>
+    <style>
+        .status-processing { color: black; }
+        .status-failed { color: red; }
+        .status-succeed { color: green; }
+    </style>
 </head>
 <body>
     <h1>Video Mix List</h1>
@@ -10,7 +15,7 @@
         <li>
             {{video_mix.timestamp_started.strftime('%Y-%m-%d %H:%M')}}
             <a href="/video_mix/{{ video_mix.id }}">{{ video_mix.task_string }}</a>
-            ({{ video_mix.status.value }})
+            <span class="status-{{ video_mix.status.name.lower() }}">({{ video_mix.status.value }})</span>
             {% if video_mix.status.name == 'SUCCEED' %}
             <a href="/video_mix_download/{{ video_mix.output_file }}">Download</a>
             {% end %}
