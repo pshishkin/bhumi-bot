@@ -5,14 +5,10 @@ import os
 import random
 import re
 import string
+import traceback
 
-from bson import ObjectId
-from motor.motor_asyncio import AsyncIOMotorClient
 from concurrent.futures import ThreadPoolExecutor
 from tornado.ioloop import IOLoop
-
-from moviepy.video.fx.margin import margin
-import threading
 
 import tornado.web
 import tornado_http_auth
@@ -163,17 +159,17 @@ def wrap_generate_video_mix(video_files, output_file):
                 raise NoVideoException(f'File {os.path.split(file)[1]} does not exist')
         generate_video_mix(video_files, output_file)
     except Exception as e:
-        print(f'wrap_generate_video_mix exception {str(e)}')
+        print(f'wrap_generate_video_mix exception: {str(e)}')
+        traceback.print_exc()
         return e
     else:
         print('ok fine')
 
 
 from moviepy.editor import (
-    concatenate_videoclips, VideoFileClip, AudioFileClip, concatenate_audioclips
+    concatenate_videoclips, VideoFileClip, AudioFileClip, concatenate_audioclips, ColorClip, CompositeVideoClip
 )
-from moviepy.video.fx.margin import margin
-
+import os
 
 def generate_video_mix(video_files, output_file):
     video_clips = []
@@ -186,20 +182,17 @@ def generate_video_mix(video_files, output_file):
             clip = VideoFileClip(video_file)
 
             # Resize video maintaining aspect ratio
-            aspect_ratio = clip.aspect_ratio
-            if clip.w > clip.h:
-                new_width = width
-                new_height = int(new_width / aspect_ratio)
+            if clip.aspect_ratio >= first_video.aspect_ratio:
+                clip_resized = clip.resize(width=None, height=height)
             else:
-                new_height = height
-                new_width = int(new_height * aspect_ratio)
-
-            clip_resized = clip.resize((new_width, new_height))
+                clip_resized = clip.resize(width=width, height=None)
 
             # Pad the video
-            pad_left = int((width - new_width) / 2)
-            pad_top = int((height - new_height) / 2)
-            clip_padded = margin(clip_resized, left=pad_left, top=pad_top, color=(0, 0, 0))
+            pad_left = int((width - clip_resized.w) / 2)
+            pad_top = int((height - clip_resized.h) / 2)
+
+            background = ColorClip((width, height), color=(0, 0, 0), duration=clip_resized.duration)
+            clip_padded = CompositeVideoClip([background, clip_resized.set_position(("center", "center"))])
 
             video_clips.append(clip_padded)
             audio_clips.append(AudioFileClip(video_file))
