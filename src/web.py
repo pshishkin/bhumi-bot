@@ -98,7 +98,7 @@ class UploadHandler(tornado.web.RequestHandler, tornado_http_auth.DigestAuthMixi
         final_filename = user_file_name + extension
         if os.path.exists(os.path.join(UPLOAD, final_filename)):
             self.set_status(400)
-            self.finish("File already exists")
+            self.finish("File already uploaded, just use it. It's name is " + final_filename)
         with open(os.path.join(UPLOAD, final_filename), 'wb') as output_file:
             output_file.write(file['body'])
         self.finish(json.dumps({'file_id': final_filename}))
@@ -172,6 +172,8 @@ def wrap_generate_video_mix(video_files, output_file):
 from moviepy.editor import (
     concatenate_videoclips, VideoFileClip, AudioFileClip, concatenate_audioclips
 )
+from moviepy.video.fx.margin import margin
+
 
 def generate_video_mix(video_files, output_file):
     video_clips = []
