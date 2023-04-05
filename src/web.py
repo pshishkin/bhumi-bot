@@ -215,6 +215,12 @@ class DownloadHandler(tornado.web.StaticFileHandler):
         await super().get(filename, include_body)
 
 
+class AirdropAmountHandler(tornado.web.RequestHandler):
+    async def get(self):
+        user_id = self.get_argument('user_id')
+        await self.finish(json.dumps({'amount': 123, 'details': 'потому что почему'}))
+
+
 def make_app():
 
     return tornado.web.Application([
@@ -225,6 +231,7 @@ def make_app():
         (r"/video_mixes/", VideoMixListHandler),
         (r"/upload", UploadHandler),
         (r"/generate", GenerateHandler),
+        (r"/airdrop/amount", AirdropAmountHandler),
     ])
 
 
