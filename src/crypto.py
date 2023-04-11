@@ -54,16 +54,15 @@ class Crypto:
 
     async def get_token_balance(self, pubkey: Pubkey) -> Decimal:
         ans = await self.token.get_accounts_by_owner(pubkey)
-        logging.info(f'Response from Solana get_accounts:\n{ans}')
         if not ans.value:
             return Decimal(0)
         # print(ans)
         token_account = ans.value[0]
-        print(token_account)
+        # print(token_account)
         balance = await self.token.get_balance(token_account.pubkey)
-        print(balance.value)
+        # print(balance.value)
         value = balance.value
-        print(value.decimals, value.amount)
+        # print(value.decimals, value.amount)
         return Decimal(value.amount) / (Decimal(10) ** value.decimals)
 
     async def init_balance(self, user):

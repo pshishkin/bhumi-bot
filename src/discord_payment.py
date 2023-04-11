@@ -35,7 +35,7 @@ crypto = Crypto()
 
 
 async def check_balance(interaction):
-    wallet = await wallet_controller.get_wallet(interaction.user.id)
+    wallet = await wallet_controller.get_wallet(interaction.user.id, interaction.user.name)
     balance = await crypto.get_token_balance(wallet.pubkey)
     logging.info(f"Balance for {interaction.user.id} is {balance} at wallet {wallet.pubkey}")
     if balance == Decimal(0):
@@ -71,7 +71,7 @@ from urllib.parse import quote
 class ViewYesIWant(discord.ui.View): # Create a class called MyView that subclasses discord.ui.View
     @discord.ui.button(label="Хочу!", style=discord.ButtonStyle.primary, emoji="😎") # Create a button with the label "😎 Click me!" with color Blurple
     async def button_callback(self, button, interaction):
-        wallet = await wallet_controller.get_wallet(interaction.user.id)
+        wallet = await wallet_controller.get_wallet(interaction.user.id, interaction.user.name)
         embed = discord.Embed(
             description=f"Чтобы открыть 13 буми, отправь 13 BHUMI токенов на адрес {wallet.pubkey} . Также можешь отсканировать QR код ниже если у тебя уже есть Phantom или другой кошелек для Solana.")
         deeplink = f'solana:{wallet.pubkey}?amount=13&spl-token=FerpHzAK9neWr8Azn5U6qE4nRGkGU35fTPiCVVKr7yyF&message={quote("Хочу открыть 13 буми")}'
@@ -107,6 +107,7 @@ async def init():
     await WalletController.initialize()
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     loop = asyncio.get_event_loop()
     loop.run_until_complete(init())
     bot.run(settings.DISCORD_TOKEN) # run the bot with the token

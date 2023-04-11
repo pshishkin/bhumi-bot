@@ -30,19 +30,22 @@ class WalletController(BaseMongoRepository):
         self.crypto = Crypto()
 
     async def mark_wallet_as_paid(self, user_id: str):
+        user_id = str(user_id)
         logging.info(f'Marking user {user_id} as paid')
         await self._update_one({'_id': user_id},
                                {'$set': {'status': Status.PAID.value}},
                                upsert=False)
 
-    async def get_wallet(self, user_id: str) -> Wallet:
-        logging.info(f'Getting user {user_id}')
+    async def get_wallet(self, user_id: str, user_name: str) -> Wallet:
+        user_id = str(user_id)
+        logging.info(f'Getting user {user_id} {user_name}')
         user_dict = await self._find_one({'_id': user_id})
         if not user_dict:
             keypair = self.crypto.generate_keypair()
             await self._insert_one({
                 '_id': user_id,
                 'keypair': keypair.to_json(),
+                'name': user_name,
                 'status': Status.CREATED.value,
                 'timestamp_added': datetime.now(tz=timezone.utc),
             })
