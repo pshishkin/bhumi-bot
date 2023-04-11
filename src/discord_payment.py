@@ -37,7 +37,7 @@ crypto = Crypto()
 async def check_balance(interaction):
     wallet = await wallet_controller.get_wallet(interaction.user.id)
     balance = await crypto.get_token_balance(wallet.pubkey)
-    print(balance)
+    logging.info(f"Balance for {interaction.user.id} is {balance} at wallet {wallet.pubkey}")
     if balance == Decimal(0):
         await interaction.response.send_message(
             f"Пока что на адрес ничего не пришло, попробуй еще раз через 10 секунд.", ephemeral=True,
