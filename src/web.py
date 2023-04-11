@@ -220,6 +220,28 @@ class AirdropAmountHandler(tornado.web.RequestHandler):
         user_id = self.get_argument('user_id')
         await self.finish(json.dumps({'amount': 123, 'details': 'потому что почему'}))
 
+from io import BytesIO
+import qrcode
+
+class QRCodeHandler(tornado.web.RequestHandler):
+    async def get(self):
+        data = self.get_argument('data', 'Hello, Tornado!')
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=10,
+            border=4,
+        )
+        qr.add_data(data)
+        qr.make(fit=True)
+
+        img = qr.make_image(fill_color="black", back_color="white")
+        img_buffer = BytesIO()
+        img.save(img_buffer, "PNG")
+        img_buffer.seek(0)
+        self.set_header("Content-Type", "image/png")
+        self.set_header("Content-Length", img_buffer.getbuffer().nbytes)
+        self.write(img_buffer.getvalue())
 
 def make_app():
 
@@ -232,6 +254,7 @@ def make_app():
         (r"/upload", UploadHandler),
         (r"/generate", GenerateHandler),
         (r"/airdrop/amount", AirdropAmountHandler),
+        (r"/qrcode", QRCodeHandler),
     ])
 
 

@@ -18,6 +18,8 @@ import itertools
 import logging
 import random
 from typing import Optional
+
+from wallet_controller import WalletController
 from web import main_web
 from telegram import __version__ as TG_VER
 import settings
@@ -424,6 +426,7 @@ async def init():
     MongoConnection.initialize()
     await UserController.initialize()
     await PhotoController.initialize()
+    await WalletController.initialize()
 
 
 def main() -> None:
