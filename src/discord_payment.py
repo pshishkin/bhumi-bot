@@ -77,6 +77,7 @@ class ViewYesIWant(discord.ui.View): # Create a class called MyView that subclas
         deeplink = f'solana:{wallet.pubkey}?amount=13&spl-token=FerpHzAK9neWr8Azn5U6qE4nRGkGU35fTPiCVVKr7yyF&message={quote("Хочу открыть 13 буми")}'
         embed.set_image(url=f"http://188.166.55.155:8432/qrcode?data={quote(deeplink)}")
         await interaction.response.send_message(
+            f'{wallet.pubkey}',
             embed=embed,
             # f"Чтобы открыть 13 буми, отправь 13 BHUMI токенов на адрес {wallet.pubkey}.",
             ephemeral=True, view=ViewIveSent()) # Send a message when the button is clicked
