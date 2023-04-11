@@ -66,16 +66,16 @@ class ViewIveSent(discord.ui.View): # Create a class called MyView that subclass
         await check_balance(interaction)
 
 
+from urllib.parse import quote
 
 class ViewYesIWant(discord.ui.View): # Create a class called MyView that subclasses discord.ui.View
     @discord.ui.button(label="Хочу!", style=discord.ButtonStyle.primary, emoji="😎") # Create a button with the label "😎 Click me!" with color Blurple
     async def button_callback(self, button, interaction):
         wallet = await wallet_controller.get_wallet(interaction.user.id)
         embed = discord.Embed(
-            title=f"{wallet.pubkey}",
-            description="Чтобы открыть 13 буми, отправь 13 BHUMI токенов на [адреccс](solana:GwGzxKxeJgvyhi1QNuqWoqE1yTBwAJn84rfDsuCQjPKJ?amount=0.03&memo=muhaha&label=muhaha&message=I%20want%20to%20open%2013%20BHUMI&spl-token=FerpHzAK9neWr8Azn5U6qE4nRGkGU35fTPiCVVKr7yyF) выше.",
-            url="solana:GwGzxKxeJgvyhi1QNuqWoqE1yTBwAJn84rfDsuCQjPKJ?amount=0.03&memo=muhaha&label=muhaha&message=I%20want%20to%20open%2013%20BHUMI&spl-token=FerpHzAK9neWr8Azn5U6qE4nRGkGU35fTPiCVVKr7yyF")
-        embed.set_image(url="")
+            description=f"Чтобы открыть 13 буми, отправь 13 BHUMI токенов на адрес {wallet.pubkey} . Также можешь отсканировать QR код ниже если у тебя уже есть Phantom или другой кошелек для Solana.")
+        deeplink = f'solana:{wallet.pubkey}?amount=13&spl-token=FerpHzAK9neWr8Azn5U6qE4nRGkGU35fTPiCVVKr7yyF&message={quote("Хочу открыть 13 буми")}'
+        embed.set_image(url=f"http://188.166.55.155:8432/qrcode?data={quote(deeplink)}")
         await interaction.response.send_message(
             embed=embed,
             # f"Чтобы открыть 13 буми, отправь 13 BHUMI токенов на адрес {wallet.pubkey}.",
