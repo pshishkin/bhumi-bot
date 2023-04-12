@@ -48,8 +48,11 @@ async def check_balance(interaction):
     else:
         role = discord.utils.get(interaction.user.guild.roles, name="Открыватели")
         await interaction.user.add_roles(role)
+        embed = discord.Embed(
+            title="Все получилось!",
+            description=f"Вижу на адресе {balance} BHUMI токенов ✨. Выдаю доступы!\n\n Теперь у тебя появились новые каналы. \nПрочитай сначала [это сообщение]({settings.DISCORD_INTRO_URL}), мы описали там с чего начать.")
         await interaction.response.send_message(
-            f"Вижу на адресе {balance} BHUMI токенов ✨. Выдаю доступы! Сейчас у тебя появится канал #что-делать, читай его, там все написано.",
+            embed=embed,
             ephemeral=True)
 
 
