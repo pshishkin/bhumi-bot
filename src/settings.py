@@ -1,4 +1,5 @@
 import os
+from decimal import Decimal
 
 # common settings
 MONGO_CONN_STR = os.getenv('MONGO_CONN_STR', 'mongodb://localhost:27017')
@@ -13,6 +14,11 @@ VIDEO_ROOT = os.getenv('VIDEO_ROOT', './videos')
 WEB_USERNAME = os.getenv('WEB_USERNAME', 'a')
 WEB_PASS = os.getenv('WEB_PASS', 'aa')
 COOKIE_SECRET = "your_cookie_secret"
+
+# drop settings
+SNAPSHOTS_DIR = os.getenv('SNAPSHOTS_DIR', './data/snapshots/')
+SOL_DROP_AMOUNT = Decimal(os.getenv('SOL_DROP_AMOUNT', '0.003'))
+BHUMI_DROP_BASE = int(os.getenv('BHUMI_DROP_BASE', '13'))
 
 # tg parser settings
 TG_API_ID = os.getenv('TG_API_ID', '123')

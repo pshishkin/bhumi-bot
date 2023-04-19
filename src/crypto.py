@@ -2,6 +2,8 @@ import logging
 import enum
 import json
 from decimal import *
+from typing import Any
+import base58
 
 from solders.pubkey import Pubkey
 from solders.keypair import Keypair
@@ -14,17 +16,12 @@ from solana.rpc.types import TxOpts
 
 from solana.transaction import Transaction
 from spl.token.instructions import (
-    initialize_mint,
-    InitializeMintParams,
-    initialize_account,
-    InitializeAccountParams,
-    mint_to_checked,
-    MintToCheckedParams,
     get_associated_token_address,
     create_associated_token_account,
     transfer_checked,
     TransferCheckedParams,
 )
+from solders.system_program import TransferParams, transfer, create_account
 
 import settings
 
@@ -70,6 +67,56 @@ class Crypto:
             user.balance = user.balance_dev
         else:
             user.balance = await self._get_token_balance(user.keypair)
+
+    async def transfer_drop(self, receiver_str: str, token_balance_delta: Decimal, sol_balance_delta: Decimal) -> Any:
+        receiver = Pubkey.from_string(receiver_str)
+        origin = self.fee_payer_keypair
+        txn = Transaction(fee_payer=origin.pubkey())
+        associated_token_address = get_associated_token_address(receiver, self.token.pubkey)
+
+
+        # Check if the associated token account exists
+        token_account_info = await self.solana_cli.get_account_info(associated_token_address)
+
+        if token_account_info is None or token_account_info.value is None:
+            # Create associated token account if it does not exist
+            create_associated_token_account_ix = create_associated_token_account(
+                origin.pubkey(),
+                receiver,
+                self.token.pubkey
+            )
+            txn.add(create_associated_token_account_ix)
+
+        txn.add(
+            transfer_checked(
+                TransferCheckedParams(
+                    program_id=TOKEN_PROGRAM_ID,
+                    source=get_associated_token_address(origin.pubkey(), self.token.pubkey),
+                    mint=self.token.pubkey,
+                    dest=associated_token_address,
+                    owner=origin.pubkey(),
+                    amount=int(token_balance_delta * (10 ** self.decimals)),
+                    decimals=self.decimals
+                )
+            )
+        )
+
+        sol_transfer_amount = int(sol_balance_delta * (10 ** 9))  # Convert SOL to lamports
+        txn.add(
+            transfer(
+                TransferParams(
+                    from_pubkey=origin.pubkey(),
+                    to_pubkey=receiver,
+                    lamports=sol_transfer_amount
+                )
+            )
+        )
+
+        signers = [origin]
+        ans = await self.solana_cli.send_transaction(txn, *signers)
+        return base58.b58encode(bytearray(ans.value.to_bytes_array())).decode('utf-8')
+
+        # return ans.get('result', None)
 
     async def _charge_token(self, kp_from: Keypair, balance_delta: Decimal) -> str:
         txn = Transaction(fee_payer=self.fee_payer_keypair.public_key)

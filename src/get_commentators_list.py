@@ -53,21 +53,31 @@ if __name__ == '__main__':
         process_message(m)
 
     COLLECT_OVER_DAYS = 365*2
-    for _ in range(200):
-        time.sleep(2)
+    # COLLECT_OVER_DAYS = 10
+    for _ in range(300):
+        time.sleep(1)
+        local_users = 0
         for m in client.iter_messages(dialog.entity.id, limit=100, offset_id=mid):
+            local_users += 1
             mid = m.id
-            date = m.date
+            if date == m.date:
+                break
+            date = min(date, m.date)
             if datetime.datetime.now(tz=datetime.timezone.utc) - date > datetime.timedelta(days=COLLECT_OVER_DAYS):
                 break
             process_message(m)
             # print(m.id, m.sender_id, m.date)
-        print(f'found {len(user_dict)} users over period till {date}')
+        print(f'found {len(user_dict)} users over period till {date}, {local_users}')
         if datetime.datetime.now(tz=datetime.timezone.utc) - date > datetime.timedelta(days=COLLECT_OVER_DAYS):
+            break
+        if local_users < 3:
             break
 
     print(f"found {len(user_dict)} users")
-    print(json.dumps({'name': dialog.name, 'users': user_dict}))
+
+    # save this json to file with name of the channel
+    with open(f"{settings.SNAPSHOTS_DIR}{input('Enter json file name: ')}.json", 'w') as f:
+        f.write(json.dumps({'name': input('Назови группу: '), 'users': user_dict}))
 
     # for m in client.iter_messages(channel, limit=100, offset_id=mid):
     #     mid = m.id

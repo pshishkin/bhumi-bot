@@ -17,6 +17,7 @@ solana = "^0.29.2"
 pyqrcode = "^1.2.1"
 py-cord = "^2.4.1"
 qrcode = "^7.4.2"
+base58 = "^2.1.1"
 
 [tool.poetry.dev-dependencies]
 

@@ -12,7 +12,10 @@ from tornado.ioloop import IOLoop
 
 import tornado.web
 import tornado_http_auth
+
+from crypto import Crypto
 import settings
+from drop_user_controller import DropUserController
 from mongo import MongoConnection
 from video_mix_controller import VideoMixController
 import functools
@@ -214,11 +217,66 @@ class DownloadHandler(tornado.web.StaticFileHandler):
     async def get(self, filename, include_body=True):
         await super().get(filename, include_body)
 
+def get_user_allowance(user_id: str) -> (int, str):
+    found_in_groups = []
+    # look through all json files in folder and create a list of files where user_id is present
+    for file in os.listdir(settings.SNAPSHOTS_DIR):
+        if file.endswith(".json"):
+            with open(os.path.join(settings.SNAPSHOTS_DIR, file), 'r') as f:
+                data = json.load(f)
+                if user_id in data['users']:
+                    found_in_groups.append(data['name'])
+
+    details = 'ни в каких'
+    allowance_user = 0
+
+    if found_in_groups:
+        details = ', '.join(found_in_groups)
+        allowance_user = settings.BHUMI_DROP_BASE * len(found_in_groups)
+
+    return allowance_user, details
+
 
 class AirdropAmountHandler(tornado.web.RequestHandler):
     async def get(self):
         user_id = self.get_argument('user_id')
-        await self.finish(json.dumps({'amount': 123, 'details': 'потому что почему'}))
+        if not user_id:
+            raise tornado.web.HTTPError(status_code=400, reason="No user_id provided")
+
+        allowance_user, details = get_user_allowance(user_id)
+
+        user_obj = await drop_user_controller.get_user(user_id)
+        claimed_user = user_obj.claimed
+        claimed_total = await drop_user_controller.get_total_claimed()
+
+        await self.finish(json.dumps({'allowance_user': allowance_user, 'details': details, 'claimed_user': claimed_user, 'claimed_total': claimed_total}))
+
+
+class AirdropDropHandler(tornado.web.RequestHandler):
+    async def get(self):
+        user_id = self.get_argument('user_id')
+        if not user_id:
+            raise tornado.web.HTTPError(status_code=400, reason="No user_id provided")
+        wallet = self.get_argument('wallet')
+        if not wallet:
+            raise tornado.web.HTTPError(status_code=400, reason="No wallet provided")
+
+        allowance_user, details = get_user_allowance(user_id)
+
+        user_obj = await drop_user_controller.get_user(user_id)
+        claimed_user = user_obj.claimed
+
+        if claimed_user >= allowance_user:
+            await self.finish(json.dumps({'drop_details': 'У вас нет BHUMI которые можно было бы получить', 'dropped_amount': 0}))
+
+        drop_amount = allowance_user - claimed_user
+
+        # drop should happen here
+        hash = await crypto.transfer_drop(wallet, drop_amount, settings.SOL_DROP_AMOUNT)
+        await drop_user_controller.add_claim(user_id, drop_amount, wallet)
+
+        await self.finish(json.dumps({'drop_details': f'Вам отправлено {drop_amount} BHUMI на кошелек {wallet}, ура! Ссылка на транзакцию: https://solscan.io/tx/{hash}', 'dropped_amount': drop_amount}))
+
 
 from io import BytesIO
 import qrcode
@@ -254,6 +312,7 @@ def make_app():
         (r"/upload", UploadHandler),
         (r"/generate", GenerateHandler),
         (r"/airdrop/amount", AirdropAmountHandler),
+        (r"/airdrop/drop", AirdropDropHandler),
         (r"/qrcode", QRCodeHandler),
     ])
 
@@ -268,7 +327,8 @@ async def main_tornado():
 UPLOAD = os.path.join(settings.VIDEO_ROOT, 'upload')
 DOWNLOAD = os.path.join(settings.VIDEO_ROOT, 'download')
 video_mix_controller = VideoMixController()
-
+drop_user_controller = DropUserController()
+crypto = Crypto()
 
 def init_web():
     # client = AsyncIOMotorClient()
@@ -286,6 +346,7 @@ def init_web():
 async def async_init():
     MongoConnection.initialize()
     await VideoMixController.initialize()
+    await DropUserController.initialize()
 
 
 def main_web():
