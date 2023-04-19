@@ -267,7 +267,7 @@ class AirdropDropHandler(tornado.web.RequestHandler):
         claimed_user = user_obj.claimed
 
         if claimed_user >= allowance_user:
-            await self.finish(json.dumps({'drop_details': 'У вас нет BHUMI которые можно было бы получить', 'dropped_amount': 0}))
+            await self.finish(json.dumps({'drop_details': 'У тебя нет BHUMI которые можно было бы получить', 'dropped_amount': 0}))
 
         drop_amount = allowance_user - claimed_user
 
@@ -275,7 +275,7 @@ class AirdropDropHandler(tornado.web.RequestHandler):
         hash = await crypto.transfer_drop(wallet, drop_amount, settings.SOL_DROP_AMOUNT)
         await drop_user_controller.add_claim(user_id, drop_amount, wallet)
 
-        await self.finish(json.dumps({'drop_details': f'Вам отправлено {drop_amount} BHUMI на кошелек {wallet}, ура! Ссылка на транзакцию: https://solscan.io/tx/{hash}', 'dropped_amount': drop_amount}))
+        await self.finish(json.dumps({'drop_details': f'Тебе отправлено {drop_amount} BHUMI на кошелек {wallet}, ура! Ссылка на транзакцию: https://solscan.io/tx/{hash}', 'dropped_amount': drop_amount}))
 
 
 from io import BytesIO
