@@ -46,7 +46,7 @@ async def check_balance(interaction):
         await interaction.response.send_message(f"Вижу на адресе {balance} BHUMI токенов. Этого недостаточно, нужно 13.", ephemeral=True,
                                                 view=ViewCheckAgain())
     else:
-        role = discord.utils.get(interaction.user.guild.roles, name="Открыватели")
+        role = discord.utils.get(interaction.user.guild.roles, name="Открыватели+")
         await interaction.user.add_roles(role)
         embed = discord.Embed(
             title="Все получилось!",
