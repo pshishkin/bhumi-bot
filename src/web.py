@@ -232,7 +232,7 @@ def get_user_allowance(user_id: str) -> (int, str):
 
     if found_in_groups:
         details = ', '.join(found_in_groups)
-        allowance_user = settings.BHUMI_DROP_BASE * (1 + len(found_in_groups))
+        allowance_user += settings.BHUMI_DROP_BASE * len(found_in_groups)
 
     return allowance_user, details
 
