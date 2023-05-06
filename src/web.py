@@ -228,7 +228,7 @@ def get_user_allowance(user_id: str) -> (int, str):
                     found_in_groups.append(data['name'])
 
     details = 'ни в каких'
-    allowance_user = 0
+    allowance_user = settings.BHUMI_DROP_BASE
 
     if found_in_groups:
         details = ', '.join(found_in_groups)
@@ -260,6 +260,9 @@ class AirdropDropHandler(tornado.web.RequestHandler):
         wallet = self.get_argument('wallet')
         if not wallet:
             raise tornado.web.HTTPError(status_code=400, reason="No wallet provided")
+        ref = self.get_argument('ref')
+        if not ref:
+            ref = ''
 
         allowance_user, details = get_user_allowance(user_id)
 
@@ -273,7 +276,7 @@ class AirdropDropHandler(tornado.web.RequestHandler):
 
         # drop should happen here
         hash = await crypto.transfer_drop(wallet, drop_amount, settings.SOL_DROP_AMOUNT)
-        await drop_user_controller.add_claim(user_id, drop_amount, wallet)
+        await drop_user_controller.add_claim(user_id, drop_amount, wallet, ref)
 
         await self.finish(json.dumps({'drop_details': f'Отправил {drop_amount} BHUMI по адресу {wallet}\n\n Ссылка на транзакцию: https://solscan.io/tx/{hash}', 'dropped_amount': drop_amount}))
 
