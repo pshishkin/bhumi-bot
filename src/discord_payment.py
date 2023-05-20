@@ -42,11 +42,11 @@ async def check_balance(interaction):
         await interaction.response.send_message(
             f"Пока что на адрес ничего не пришло, попробуй еще раз через 10 секунд.", ephemeral=True,
             view=ViewCheckAgain())
-    elif balance < Decimal(13):
-        await interaction.response.send_message(f"Вижу на адресе {balance} BHUMI токенов. Этого недостаточно, нужно 13.", ephemeral=True,
+    elif balance < Decimal(settings.BHUMI_TO_ENTER):
+        await interaction.response.send_message(f"Вижу на адресе {balance} BHUMI токенов. Этого недостаточно, нужно {settings.BHUMI_TO_ENTER}.", ephemeral=True,
                                                 view=ViewCheckAgain())
     else:
-        role = discord.utils.get(interaction.user.guild.roles, name="Открыватели+")
+        role = discord.utils.get(interaction.user.guild.roles, name="Открыватели")
         await interaction.user.add_roles(role)
         embed = discord.Embed(
             title="Все получилось!",
@@ -76,8 +76,8 @@ class ViewYesIWant(discord.ui.View): # Create a class called MyView that subclas
     async def button_callback(self, button, interaction):
         wallet = await wallet_controller.get_wallet(interaction.user.id, interaction.user.name)
         embed = discord.Embed(
-            description=f"Чтобы открыть 13 буми, отправь 13 BHUMI токенов на адрес {wallet.pubkey} . Также можешь отсканировать QR код ниже если у тебя уже есть Phantom или другой кошелек для Solana.")
-        deeplink = f'solana:{wallet.pubkey}?amount=13&spl-token=FerpHzAK9neWr8Azn5U6qE4nRGkGU35fTPiCVVKr7yyF&message={quote("Хочу открыть 13 буми")}'
+            description=f"Чтобы открыть 13 буми, отправь {settings.BHUMI_TO_ENTER} BHUMI токенов на адрес {wallet.pubkey} . Также можешь отсканировать QR код ниже если у тебя уже есть Phantom или другой кошелек для Solana.")
+        deeplink = f'solana:{wallet.pubkey}?amount={settings.BHUMI_TO_ENTER}&spl-token=FerpHzAK9neWr8Azn5U6qE4nRGkGU35fTPiCVVKr7yyF&message={quote("Хочу открыть 13 буми")}'
         embed.set_image(url=f"http://188.166.55.155:8432/qrcode?data={quote(deeplink)}")
         await interaction.response.send_message(
             f'{wallet.pubkey}',
