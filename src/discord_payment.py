@@ -72,12 +72,12 @@ class ViewIveSent(discord.ui.View): # Create a class called MyView that subclass
 from urllib.parse import quote
 
 class ViewYesIWant(discord.ui.View): # Create a class called MyView that subclasses discord.ui.View
-    @discord.ui.button(label="Хочу!", style=discord.ButtonStyle.primary, emoji="😎") # Create a button with the label "😎 Click me!" with color Blurple
+    @discord.ui.button(label="Готов!", style=discord.ButtonStyle.primary, emoji="😎") # Create a button with the label "😎 Click me!" with color Blurple
     async def button_callback(self, button, interaction):
         wallet = await wallet_controller.get_wallet(interaction.user.id, interaction.user.name)
         embed = discord.Embed(
-            description=f"Чтобы открыть 13 буми, отправь {settings.BHUMI_TO_ENTER} BHUMI токенов на адрес {wallet.pubkey} . Также можешь отсканировать QR код ниже если у тебя уже есть Phantom или другой кошелек для Solana.")
-        deeplink = f'solana:{wallet.pubkey}?amount={settings.BHUMI_TO_ENTER}&spl-token=FerpHzAK9neWr8Azn5U6qE4nRGkGU35fTPiCVVKr7yyF&message={quote("Хочу открыть 13 буми")}'
+            description=f"Отправь {settings.BHUMI_TO_ENTER} BHUMI токенов на адрес {wallet.pubkey} . Также можешь отсканировать QR код ниже если у тебя уже есть Phantom или другой кошелек для Solana.")
+        deeplink = f'solana:{wallet.pubkey}?amount={settings.BHUMI_TO_ENTER}&spl-token=FerpHzAK9neWr8Azn5U6qE4nRGkGU35fTPiCVVKr7yyF&message={quote("Отправить 130 буми")}'
         embed.set_image(url=f"http://188.166.55.155:8432/qrcode?data={quote(deeplink)}")
         await interaction.response.send_message(
             f'{wallet.pubkey}',
@@ -90,7 +90,7 @@ async def first_message(member):
     guild = member.guild
     if guild.system_channel is not None:
         await guild.system_channel.send(
-            f'Привет, {member.mention}! Хочешь открыть 13 буми?', view=ViewYesIWant()
+            f'Привет, {member.mention}! Готов отправить 130 буми?', view=ViewYesIWant()
         )
 
 @bot.event
@@ -104,7 +104,7 @@ async def on_ready():
 @bot.slash_command(name = "hello", description = "Say hello to the bot")
 async def hello(ctx):
     logging.info(f"Sending hello message to {ctx.author}")
-    await ctx.respond(f'Привет, {ctx.author.mention}! Хочешь открыть 13 буми?', view=ViewYesIWant())
+    await ctx.respond(f'Привет, {ctx.author.mention}! Готов отправить 130 буми?', view=ViewYesIWant())
 
 async def init():
     MongoConnection.initialize()
