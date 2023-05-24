@@ -72,7 +72,7 @@ class ViewIveSent(discord.ui.View): # Create a class called MyView that subclass
 from urllib.parse import quote
 
 class ViewYesIWant(discord.ui.View): # Create a class called MyView that subclasses discord.ui.View
-    @discord.ui.button(label="Готов!", style=discord.ButtonStyle.primary, emoji="😎") # Create a button with the label "😎 Click me!" with color Blurple
+    @discord.ui.button(label="Да!", style=discord.ButtonStyle.primary, emoji="😎") # Create a button with the label "😎 Click me!" with color Blurple
     async def button_callback(self, button, interaction):
         wallet = await wallet_controller.get_wallet(interaction.user.id, interaction.user.name)
         embed = discord.Embed(
@@ -90,7 +90,7 @@ async def first_message(member):
     guild = member.guild
     if guild.system_channel is not None:
         await guild.system_channel.send(
-            f'Привет, {member.mention}! Готов отправить 130 буми?', view=ViewYesIWant()
+            f'Привет, {member.mention}! Отправишь 130 буми?', view=ViewYesIWant()
         )
 
 @bot.event
@@ -104,7 +104,7 @@ async def on_ready():
 @bot.slash_command(name = "hello", description = "Say hello to the bot")
 async def hello(ctx):
     logging.info(f"Sending hello message to {ctx.author}")
-    await ctx.respond(f'Привет, {ctx.author.mention}! Готов отправить 130 буми?', view=ViewYesIWant())
+    await ctx.respond(f'Привет, {ctx.author.mention}! Отправишь 130 буми?', view=ViewYesIWant())
 
 async def init():
     MongoConnection.initialize()
