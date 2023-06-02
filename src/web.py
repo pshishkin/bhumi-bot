@@ -233,6 +233,8 @@ def get_user_allowance(user_id: str) -> (int, str):
     if found_in_groups:
         details = ', '.join(found_in_groups)
         allowance_user += settings.BHUMI_DROP_BASE * len(found_in_groups)
+        if "\u0428\u043c\u0438\u044216" in found_in_groups:
+            allowance_user += settings.BHUMI_DROP_BASE * 2
 
     return allowance_user, details
 
