@@ -74,7 +74,7 @@ async def async_main():
     while True:
         await distribute()
         logger.info("sleeping for an hour...")
-        await sleep(10)
+        await sleep(60 * 60)
 
 
 def main_distribute_stash():

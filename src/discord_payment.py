@@ -54,11 +54,17 @@ async def check_balance(interaction):
         await interaction.response.send_message(
             embed=embed,
             ephemeral=True)
-        await crypto.transfer_all_with_ratios(
-            wallet.keypair,
-            crypto.daily_stash_keypair,
-            [Recipient(address=crypto.daily_stash_keypair.pubkey(), share=Decimal(1))]
-        )
+        for i in range(10):
+            try:
+                await crypto.transfer_all_with_ratios(
+                    wallet.keypair,
+                    crypto.daily_stash_keypair,
+                    [Recipient(address=crypto.daily_stash_keypair.pubkey(), share=Decimal(1))]
+                )
+                break
+            except Exception as e:
+                logging.error(e)
+                await asyncio.sleep(60)
 
 
 class ViewCheckAgain(discord.ui.View):
