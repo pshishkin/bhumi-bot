@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import enum
 import json
@@ -40,6 +41,7 @@ class Crypto:
 
     def __init__(self):
         self._logger = logging.getLogger(self.__class__.__name__)
+        self._logger.setLevel(logging.INFO)
 
         self.token_name = 'BHUMI'
         self.token_pubkey = Pubkey.from_string('FerpHzAK9neWr8Azn5U6qE4nRGkGU35fTPiCVVKr7yyF')
@@ -71,6 +73,7 @@ class Crypto:
         return Decimal(value.amount) / (Decimal(10) ** value.decimals)
 
     async def transfer_all_with_ratios(self, bhumi_from: Keypair, fees_from: Keypair, recipients: List[Recipient]) -> Optional[str]:
+        self._logger.info(f'Sending bhumis from {bhumi_from.pubkey()} to {len(recipients)} recipients')
         shares_sum = Decimal(0)
         for recipient in recipients:
             shares_sum += recipient.share
@@ -78,6 +81,7 @@ class Crypto:
             raise Exception('Share of sent bhumis not equal to 1')
 
         bhumis_to_send = await self.get_token_balance(bhumi_from.pubkey())
+        await asyncio.sleep(1)
         if bhumis_to_send <= Decimal("0.1"):
             self._logger.info(f'Not enough BHUMI to send: {bhumis_to_send}, skipping transfer to {len(recipients)} recipients')
             return None

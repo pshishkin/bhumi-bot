@@ -1,4 +1,5 @@
 import asyncio
+import logging
 
 from crypto import Crypto, Recipient
 from decimal import Decimal
@@ -16,13 +17,14 @@ async def main():
 
     wallets = await wallet_controller.get_all_wallets()
 
-    for w in wallets[:5]:
+    for w in wallets[:3]:
         res = await crypto.transfer_all_with_ratios(
             w.keypair,
             crypto.daily_stash_keypair,
             [Recipient(address=crypto.daily_stash_keypair.pubkey(), share=Decimal(1))],
         )
         print(f'tx hash {res}')
+        await asyncio.sleep(10)
 
 async def main2():
     crypto = Crypto()
@@ -32,5 +34,6 @@ async def main2():
     # base58.b58encode_check(bytearray(res.value.to_bytes_array())).decode('utf-8')
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     loop = asyncio.get_event_loop()
     loop.run_until_complete(main())
