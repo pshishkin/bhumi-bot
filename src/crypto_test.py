@@ -16,7 +16,7 @@ async def main():
 
     wallets = await wallet_controller.get_all_wallets()
 
-    for w in wallets[:1]:
+    for w in wallets[:5]:
         res = await crypto.transfer_all_with_ratios(
             w.keypair,
             crypto.daily_stash_keypair,
