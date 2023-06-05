@@ -493,7 +493,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", help="what's going to be launched", choices=['bot', 'web'])
+    parser.add_argument("mode", help="what's going to be launched", choices=['bot', 'web', 'distribute_stash'])
     args = parser.parse_args()
     if args.mode == 'bot':
         loop = asyncio.get_event_loop()

@@ -1,23 +1,39 @@
 import asyncio
+import json
 import logging
 from decimal import Decimal
 from asyncio import sleep
 from typing import List
 
+import requests
 from solders.pubkey import Pubkey
 
+import settings
 from crypto import Crypto, Recipient
 
 crypto = Crypto()
 PRECISION = 1000000
 logger = logging.getLogger(__name__)
 
+E_WALLET_SHARE = Decimal('0.75')
+NFT_WALLETS_SHARE = Decimal(1) - E_WALLET_SHARE
+
 async def get_recipients() -> List[Recipient]:
+    url = 'https://app.floppylabs.io/api/staked?key=DQHatxYRDAZce8irdohAo85n6WRCgqGN2SHWLY2ULRNJ'
+    response = requests.get(url)
+
+    # Raise an exception if the GET request is unsuccessful.
+    if response.status_code != 200:
+        raise Exception(f"GET request to {url} failed with status code {response.status_code}")
+
+    # Load JSON data from the response
+    data = json.loads(response.text)
 
     nft_per_wallet = {}
     nfts_total = 0
     for d in data:
-        nft_per_wallet[d.address] = nft_per_wallet.get(d.address, 0) + 1
+        address = d['staker']
+        nft_per_wallet[address] = nft_per_wallet.get(address, 0) + 1
         nfts_total += 1
     logger.info(f"found {nfts_total} NFTs on {len(nft_per_wallet)} addresses")
 
@@ -25,11 +41,18 @@ async def get_recipients() -> List[Recipient]:
     dec_to_redistribute = Decimal(1)
     for w, v in nft_per_wallet.items():
         dec = Decimal(int(v * PRECISION / nfts_total)) / Decimal(PRECISION)
-        dec_to_redistribute -= dec
         ans.append(Recipient(
             address=Pubkey.from_string(w),
-            share=dec,
+            share=dec * NFT_WALLETS_SHARE,
         ))
+
+    ans.append(Recipient(
+        address=Pubkey.from_string(settings.E_WALLET_PUBKEY),
+        share=E_WALLET_SHARE,
+    ))
+
+    for w in ans:
+        dec_to_redistribute -= w.share
 
     if abs(dec_to_redistribute) > Decimal(0.0001):
         raise Exception('wrong distribution')
@@ -49,8 +72,8 @@ async def distribute():
 
 async def async_main():
     await distribute()
-    logger.info("sleeping for a day...")
-    await sleep(60 * 60 * 24)
+    logger.info("sleeping for an hour...")
+    await sleep(60 * 60)
 
 
 def main_distribute_stash():
