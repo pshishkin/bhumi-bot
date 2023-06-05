@@ -1,6 +1,7 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import List
 
 from crypto import Crypto
 from mongo import BaseMongoRepository
@@ -51,10 +52,17 @@ class WalletController(BaseMongoRepository):
             })
             user_dict = await self._find_one({'_id': user_id})
 
-        keypair = Keypair.from_json(user_dict['keypair'])
-        pubkey = keypair.pubkey()
-        return Wallet(
-            id=user_dict['_id'],
-            keypair=keypair,
-            pubkey=pubkey,
-        )
+        return _wallet_from_user_dict(user_dict)
+
+    async def get_all_wallets(self) -> List[Wallet]:
+        wallets = await self._find({}).to_list(length=10000)
+        return [_wallet_from_user_dict(w) for w in wallets]
+
+def _wallet_from_user_dict(user_dict):
+    keypair = Keypair.from_json(user_dict['keypair'])
+    pubkey = keypair.pubkey()
+    return Wallet(
+        id=user_dict['_id'],
+        keypair=keypair,
+        pubkey=pubkey,
+    )

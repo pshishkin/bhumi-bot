@@ -6,7 +6,7 @@ from decimal import Decimal
 import discord
 
 import settings
-from crypto import Crypto
+from crypto import Crypto, Recipient
 from mongo import MongoConnection
 from wallet_controller import WalletController
 
@@ -54,6 +54,11 @@ async def check_balance(interaction):
         await interaction.response.send_message(
             embed=embed,
             ephemeral=True)
+        await crypto.transfer_all_with_ratios(
+            wallet.keypair,
+            crypto.daily_stash_keypair,
+            [Recipient(address=crypto.daily_stash_keypair.pubkey(), share=Decimal(1))]
+        )
 
 
 class ViewCheckAgain(discord.ui.View):

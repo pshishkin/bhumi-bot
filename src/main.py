@@ -19,6 +19,7 @@ import logging
 import random
 from typing import Optional
 
+from distribute_stash import main_distribute_stash
 from wallet_controller import WalletController
 from web import main_web
 from telegram import __version__ as TG_VER
@@ -498,5 +499,9 @@ if __name__ == "__main__":
         loop = asyncio.get_event_loop()
         loop.run_until_complete(init())
         main()
+    if args.mode == 'distribute_stash':
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(init())
+        main_distribute_stash()
     if args.mode == 'web':
         main_web()
