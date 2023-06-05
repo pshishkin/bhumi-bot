@@ -16,6 +16,7 @@ async def main():
     wallet_controller = WalletController()
 
     wallets = await wallet_controller.get_all_wallets()
+    print(f'found {len(wallets)} wallets')
 
     for w in wallets[2:7]:
         res = await crypto.transfer_all_with_ratios(
